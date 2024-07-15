@@ -1,7 +1,5 @@
 import sys
-import random
 import AppKit
-from bs4 import BeautifulSoup
 import requests
 from pathlib import Path
 from PIL import Image
@@ -9,9 +7,10 @@ import objc
 
 BASE_URL = "https://sdo.gsfc.nasa.gov"
 
-DOWNLOADS_PATH = Path.home() / "Downloads" / "current-sdo-images"
+DOWNLOAD_PATH = Path.home() / "Downloads" / "current-sdo-image.jpg"
 
-def set_wallpaper(image_path : Path, screen: AppKit.NSScreen):
+
+def set_wallpaper(image_path: Path, screen: AppKit.NSScreen):
     ws = AppKit.NSWorkspace.sharedWorkspace()
     url = AppKit.NSURL.fileURLWithPath_(image_path.as_posix())
     options = {}
@@ -28,7 +27,7 @@ def resize_and_center_image(
     output_path: Path,
     final_width: int,
     final_height: int,
-    background_color: tuple[int, int, int]
+    background_color: tuple[int, int, int],
 ):
     # Load the original image
     original_image = Image.open(image_path)
@@ -53,7 +52,7 @@ def resize_and_center_image(
     return output_path
 
 
-def download(url : str, dest : Path):
+def download(url: str, dest: Path):
     """
     download image and wait for download to finish
     """
@@ -65,31 +64,20 @@ def download(url : str, dest : Path):
 
 
 def main():
-    bs = BeautifulSoup(requests.get(BASE_URL + "/data/").text, features="lxml")
-    srcs = [
-        x.attrs["href"]
-        for x in bs.find_all("a", href=lambda x: x and "latest_4096" in x)
-    ]
-
-    dest = DOWNLOADS_PATH / "padded"
-    dest.mkdir(exist_ok=True)
-
-    screens = AppKit.NSScreen.screens()
-    srcs = random.sample(srcs, k=len(screens))
-    for screen, src in zip(screens, srcs):
-        name = Path(src).name
-        dimensions = screen.devicePixelCounts()
-        dl_path = download(f"{BASE_URL}/{src}", DOWNLOADS_PATH / name)
-        padded_img = resize_and_center_image(
-            dl_path,
-            dest / name,
-            dimensions.width,
-            dimensions.height,
-            background_color=(0, 0, 0),
-        )
-        set_wallpaper(padded_img, screen)
-        print(f"{screen.localizedName()} set to {name}")
-    return 0
+    src = "https://sdo.gsfc.nasa.gov/assets/img/latest/latest_4096_HMIIC.jpg"
+    screen = AppKit.NSScreen.screens()[0]
+    src = src
+    name = Path(src).name
+    dimensions = screen.devicePixelCounts()
+    dl_path = download(src, DOWNLOAD_PATH)
+    padded_img = resize_and_center_image(
+        dl_path,
+        DOWNLOAD_PATH,
+        dimensions.width,
+        dimensions.height,
+        background_color=(0, 0, 0),
+    )
+    set_wallpaper(padded_img, screen)
 
 
 if __name__ == "__main__":
