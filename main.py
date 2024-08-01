@@ -4,10 +4,12 @@ import requests
 from pathlib import Path
 from PIL import Image
 import objc
+import time
+import shutil
 
 BASE_URL = "https://sdo.gsfc.nasa.gov"
 
-DOWNLOAD_PATH = Path.home() / "Downloads" / "current-sdo-image.jpg"
+DOWNLOAD_PATH = Path.home() / "Downloads" / "SDO_Wallpapers"
 
 
 def set_wallpaper(image_path: Path, screen: AppKit.NSScreen):
@@ -24,7 +26,6 @@ def set_wallpaper(image_path: Path, screen: AppKit.NSScreen):
 
 def resize_and_center_image(
     image_path: Path,
-    output_path: Path,
     final_width: int,
     final_height: int,
     background_color: tuple[int, int, int],
@@ -48,31 +49,36 @@ def resize_and_center_image(
     new_image.paste(original_image, (padding_left, padding_top))
 
     # Save the result
-    new_image.save(output_path)
-    return output_path
+    new_image.save(image_path)
+    return image_path
 
 
-def download(url: str, dest: Path):
+def download(url: str, folder: Path):
     """
     download image and wait for download to finish
     """
+    # delete file if exists
+    if folder.exists():
+        shutil.rmtree(folder)
+    folder.mkdir(parents=True, exist_ok=True)
+
+    impath = folder / f"current-sdo-image_{int(time.time())}.jpg"
+
     response = requests.get(url, stream=True)
-    with open(dest, "wb") as file:
+    with open(impath, "wb") as file:
         for chunk in response.iter_content(chunk_size=128):
             file.write(chunk)
-    return dest
+    return impath
 
 
 def main():
-    src = "https://sdo.gsfc.nasa.gov/assets/img/latest/latest_4096_HMIIC.jpg"
+    src = "https://sdo.gsfc.nasa.gov/assets/img/latest/latest_4096_HMII.jpg"
     screen = AppKit.NSScreen.screens()[0]
     src = src
-    name = Path(src).name
     dimensions = screen.devicePixelCounts()
     dl_path = download(src, DOWNLOAD_PATH)
     padded_img = resize_and_center_image(
         dl_path,
-        DOWNLOAD_PATH,
         dimensions.width,
         dimensions.height,
         background_color=(0, 0, 0),
